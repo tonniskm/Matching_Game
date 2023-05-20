@@ -1,5 +1,5 @@
 import React, {Component} from 'react'
-import {StyleSheet,Text,View,Animated,Pressable,Alert,SafeAreaView} from 'react-native'
+import {StyleSheet,Text,View,Animated,Pressable,Alert,SafeAreaView,Dimensions} from 'react-native'
 import {Cards} from './components/Cards'
 import { playSound } from './components/Sounds';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -13,6 +13,12 @@ CARD_WIDTH = 80;
 CARD_HEIGHT = 120;
 SHAPES = ['circle','square','rectangle','triangle','oval']
 COLORS = ['red','blue','green','black','purple','magenta','cyan','orange','yellow']
+const WINDOW_WIDTH = Dimensions.get('window').width;
+const WINDOW_HEIGHT = Dimensions.get('window').height;
+MARGIN_X = (WINDOW_WIDTH-2*MARGIN-ACROSS*CARD_WIDTH)/(ACROSS-1)
+ROWS = Math.floor(CARDS_NUMBER/ACROSS)
+CARDS_NUMBER%ACROSS==0?ROWS=ROWS:ROWS=ROWS+1
+MARGIN_Y = (WINDOW_HEIGHT-2*TOP_SPACE-ROWS*CARD_HEIGHT)/(ROWS-1)
 export default  App = ()=>{
   let dummyInfo = []
   for (let i=0;i<CARDS_NUMBER;i++){
@@ -34,12 +40,15 @@ let [highStreak,setHighStreak] = React.useState(0);
 let [highMoves,setHighMoves] = React.useState(999);
 let [gotRecord,setGotRecord] = React.useState(false);
 let [prestige,setPrestige] = React.useState(0);
+let winner_scale = React.useRef(new Animated.Value(0)).current
+let [winnerIndex,setWinnerIndex] = React.useState(-1);
+let [winnerText,setWinnerText] = React.useState('')
 
 function getCardLocation(i){
   let row = Math.floor(i/ACROSS);
   let column = i % ACROSS;
-  let x = MARGIN + (CARD_WIDTH + MARGIN)*column;
-  let y = TOP_SPACE + (CARD_HEIGHT + MARGIN)*row;
+  let x = MARGIN + (CARD_WIDTH + MARGIN_X)*column;
+  let y = TOP_SPACE + (CARD_HEIGHT + MARGIN_Y)*row;
   let location = {};
   location.x = x;
   location.y = y;
@@ -112,7 +121,14 @@ React.useEffect(()=>{
           playSound('new_record')
           message = 'New Record!'
         }else{playSound('win')}
-        Alert.alert('','You Win!'+`\n`+message,[{text:'play again.',onPress:()=>Begin()}])
+        setWinnerIndex(999)
+        setWinnerText('You Win!'+`\n`+message+`\n`+'Play Again?')
+        Animated.timing(winner_scale,{
+          toValue:1,
+          duration:1000,
+          useNativeDriver:false
+        }).start()
+        //Alert.alert('','You Win!'+`\n`+message,[{text:'play again.',onPress:()=>Begin()}])
         }
     }else{//no match
       playSound('wrong')
@@ -131,6 +147,13 @@ function Begin(){
   setGotRecord(false)
   setStartTrigger(!startTrigger)
   setMoves(0)
+  setWinnerIndex(-1)
+  setWinnerText('')
+  Animated.timing(winner_scale,{
+    toValue:0,
+    duration:10,
+    useNativeDriver:false
+  }).start()
   let pics = GetPicOrder(GenerateUsedPics())
   for (let i=0;i<CARDS_NUMBER;i++){
     newCardInfo[i] = {}
@@ -201,10 +224,12 @@ if(prestige>0){prestigemessage = `Tries: ${moves},  Times Perfect: ${prestige}`}
   <SafeAreaView style={styles.container}>
     <Text style={styles.scores}>Streak: {streak},  High Score: {highStreak}</Text>
     <Text style={styles.scores}>{prestigemessage}</Text>
-
-
     {cardRender}
-
+    <Animated.View style={{flex:1,alignItems:'center',justifyContent:'center',zIndex:winnerIndex,transform:[{scale:winner_scale}],}}>
+      <Pressable onPress={()=>{Begin()}} style={{width:'60%',height:'50%',backgroundColor:'lightgreen',alignItems:'center',justifyContent:'center',borderRadius:25,borderColor:'black',borderWidth:2}}>
+        <Text style={{fontSize:25,fontWeight:'bold'}}>{winnerText}</Text>
+      </Pressable>
+    </Animated.View>
   </SafeAreaView>
 
   )

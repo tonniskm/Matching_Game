@@ -54,10 +54,9 @@ export function Cards (id,info,setInfo,flippedCards,setFlippedCards,mayClick,set
         duration:1500,
         useNativeDriver:false
       }).start(()=>{
-        Animated.spring(animatedValue,{
+        Animated.timing(animatedValue,{
           toValue:0,
-          friction:8,
-          tension:10,
+          duration:500,
           useNativeDriver:false
         }).start(()=>{setMayClick(true)})
       })
@@ -95,9 +94,9 @@ export function Cards (id,info,setInfo,flippedCards,setFlippedCards,mayClick,set
       <View style={{flex:1,width:'100%'}}>
           <Pressable onPress={()=>Flip()} style={{position:'absolute',width:'100%',height:'100%',zIndex:99}}></Pressable>
         <Animated.View style={[styles.flipCard,frontanimstyle]}>
-          <ImageBackground source={require('../assets/cardback.png')} style={{flex:1,height:'100%',width:'100%'}}>
-          <Text style={{color:'yellow',fontSize:20}}>{info[id].pic.shape}</Text>
-         <Text style={{color:'yellow',fontSize:20}}>{info[id].pic.color}</Text>
+          <ImageBackground source={require('../assets/cardback.png')} style={{flex:1,height:'100%',width:'100%',borderColor:'black',borderWidth:1}}>
+          {/* <Text style={{color:'yellow',fontSize:20}}>{info[id].pic.shape}</Text>
+         <Text style={{color:'yellow',fontSize:20}}>{info[id].pic.color}</Text> */}
           </ImageBackground>
         </Animated.View>
         <Animated.View style={[backanimstyle,styles.flipCard,styles.flipcardBack]}>
