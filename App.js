@@ -1,20 +1,200 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React, {Component} from 'react'
+import {StyleSheet,Text,View,Animated,Pressable,Alert,SafeAreaView} from 'react-native'
+import {Cards} from './components/Cards'
+import { playSound } from './components/Sounds';
 
-export default function App() {
-  return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
-  );
+CARDS_NUMBER = 12;
+ACROSS = 3;
+MARGIN = 40;
+TOP_SPACE = 70;
+CARD_WIDTH = 80;
+CARD_HEIGHT = 120;
+SHAPES = ['circle','square','rectangle','triangle','oval']
+COLORS = ['red','blue','green','black','purple','magenta','cyan','orange','yellow']
+export default  App = ()=>{
+  let dummyInfo = []
+  for (let i=0;i<CARDS_NUMBER;i++){
+    dummyInfo[i] = {}
+    dummyInfo[i].id = i
+    dummyInfo[i].status = 'down'
+    dummyInfo[i].complete = false
+    dummyInfo[i].pic = {shape:'dummy',color:"dumcolor"}
+  }
+let [cardInfo,setCardInfo] = React.useState(dummyInfo)
+let newCardInfo = cardInfo
+let cardRender = []
+let [flippedCards,setFlippedCards] = React.useState([]);
+let [mayClick,setMayClick] = React.useState(true)
+let [startTrigger,setStartTrigger] = React.useState(true)
+let [streak,setStreak] = React.useState(0);
+let [moves,setMoves] = React.useState(0);
+let [highStreak,setHighStreak] = React.useState(0);
+let [highMoves,setHighMoves] = React.useState(999);
+let [gotRecord,setGotRecord] = React.useState(false);
+
+function getCardLocation(i){
+  let row = Math.floor(i/ACROSS);
+  let column = i % ACROSS;
+  let x = MARGIN + (CARD_WIDTH + MARGIN)*column;
+  let y = TOP_SPACE + (CARD_HEIGHT + MARGIN)*row;
+  let location = {};
+  location.x = x;
+  location.y = y;
+  return location
+}
+React.useEffect(()=>{
+  Begin()
+},[])
+
+React.useEffect(()=>{
+  if(streak>0){
+  if(streak>highStreak){
+    setHighStreak(streak)
+    if(!gotRecord){
+      playSound('new_record')
+      setGotRecord(true)
+    }else{playSound('correct')}
+  }else{playSound('correct')}
+}
+},[streak])
+
+React.useEffect(()=>{
+  if (flippedCards.length<=1){
+    //less than two flipped
+  }else{
+    //two are flipped
+    setMoves(moves+1)
+    if(cardInfo[flippedCards[0]].pic==cardInfo[flippedCards[1]].pic){
+      //they match
+
+      setStreak(streak+1)
+      let newcardInfo = cardInfo.map(x=>x)
+      for(let i=0;i<flippedCards.length;i++){
+        newcardInfo[flippedCards[i]].complete = true
+      }
+      setFlippedCards([]);
+      setCardInfo(newcardInfo);
+      //check if winner
+      let incomplete = newcardInfo.filter(x=>!x.complete)
+      if(incomplete.length==0){
+        let message = ''
+        if(moves+1<=highMoves){
+          setHighMoves(moves+1)
+          playSound('new_record')
+          message = 'New Record!'
+        }else{playSound('win')}
+        Alert.alert('','You Win!'+`\n`+message,[{text:'play again.',onPress:()=>Begin()}])
+        }
+    }else{//no match
+      playSound('wrong')
+      setStreak(0)
+      setMayClick(false)
+      let newcardInfo = cardInfo.map(x=>x)
+      for(let i=0;i<flippedCards.length;i++){
+        newcardInfo[flippedCards[i]].status = 'down'
+      }
+      setCardInfo(newcardInfo)
+    }
+  }
+},[flippedCards])
+
+function Begin(){
+  setGotRecord(false)
+  setStartTrigger(!startTrigger)
+  setMoves(0)
+  let pics = GetPicOrder(GenerateUsedPics())
+  for (let i=0;i<CARDS_NUMBER;i++){
+    newCardInfo[i] = {}
+    newCardInfo[i].id = i;
+    newCardInfo[i].pic = pics[i]
+    newCardInfo[i].status = 'down'
+    newCardInfo[i].complete = false
+  }
+  setCardInfo(newCardInfo)
+  playSound('game_start')
+}
+
+  function GenerateUsedPics(){
+    let pic = []
+    let usedshapes = []
+    let usedcolors = []
+    let index = []
+    let useableColors = COLORS
+    for(let i=0;i<CARDS_NUMBER/2;i++){
+      let color = useableColors[Math.floor(Math.random()*useableColors.length)]
+      let usedinds = index.filter(x=>usedcolors[x]==color)
+      usedinds.length>=SHAPES.length-1?useableColors=useableColors.filter(x=>x!=color):{}
+      let usedthiscombo = []
+      for (let j=0;j<usedinds.length;j++){
+        usedthiscombo[j] = usedshapes[usedinds[j]]
+      }
+        useableshapes = SHAPES.filter(x=>usedthiscombo.indexOf(x)==-1)
+      let shape = useableshapes[Math.floor(Math.random()*useableshapes.length)]
+      index[i] = i
+      usedcolors[i] = color
+      usedshapes[i] = shape
+      pic[i] = {color:color,shape:shape}
+
+  
+      }
+      return pic
+  }
+  function GetPicOrder(usedpics){
+      let remainingspace = []
+      let pics = []
+      for (let i=0;i<CARDS_NUMBER;i++){
+        remainingspace[i] = i
+        pics[i] = -1
+      }
+      for(let i=0;i<usedpics.length;i++){
+        for(let j=0;j<2;j++){
+          let chosenspace = remainingspace[Math.floor(Math.random()*remainingspace.length)]
+          remainingspace = remainingspace.filter(x=>x!=chosenspace)
+          pics[chosenspace] = usedpics[i]
+        }
+      }
+      return pics
+  }
+
+
+
+//render
+for (let i=0;i<CARDS_NUMBER;i++){
+  let location = getCardLocation(i);
+  cardRender[i] = <View key={'card'+i} style={[styles.cardContainer,{left:location.x,top:location.y}]}>{
+    Cards(cardInfo[i].id,cardInfo,setCardInfo,flippedCards,setFlippedCards,mayClick,setMayClick,startTrigger)}
+  </View>
+}
+
+
+  return(
+  <SafeAreaView style={styles.container}>
+    <Text style={styles.scores}>Streak: {streak}  High Score: {highStreak}</Text>
+    <Text style={styles.scores}>Tries: {moves}  High Score: {highMoves}</Text>
+
+    {cardRender}
+
+  </SafeAreaView>
+
+  )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
+  container:{
+    flex:1,
+    backgroundColor:'white',
+    marginTop:20
+
   },
-});
+  cardContainer:{
+    position:'absolute',
+    left:50,
+    top:100,
+    width:CARD_WIDTH,
+    height:CARD_HEIGHT,
+  },
+  scores:{
+    fontSize:20,
+    marginLeft:20
+  }
+})
