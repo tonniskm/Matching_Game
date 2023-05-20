@@ -2,6 +2,8 @@ import React, {Component} from 'react'
 import {StyleSheet,Text,View,Animated,Pressable,Alert,SafeAreaView} from 'react-native'
 import {Cards} from './components/Cards'
 import { playSound } from './components/Sounds';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 CARDS_NUMBER = 12;
 ACROSS = 3;
@@ -31,6 +33,7 @@ let [moves,setMoves] = React.useState(0);
 let [highStreak,setHighStreak] = React.useState(0);
 let [highMoves,setHighMoves] = React.useState(999);
 let [gotRecord,setGotRecord] = React.useState(false);
+let [prestige,setPrestige] = React.useState(0);
 
 function getCardLocation(i){
   let row = Math.floor(i/ACROSS);
@@ -43,8 +46,33 @@ function getCardLocation(i){
   return location
 }
 React.useEffect(()=>{
+  getData()
   Begin()
 },[])
+
+const getData = async() =>{
+  try{
+    const saveddata = await AsyncStorage.getItem("highscores");
+    const thedata = JSON.parse(saveddata)
+    if(!thedata){}else{setHighMoves(thedata.moves),setHighStreak(thedata.streak),setPrestige(thedata.prestige)}
+  // setRead(thedata)
+  }catch(e){
+    console.log(e)
+  }
+}
+
+const writeData = async(data) =>{
+  try {
+    await AsyncStorage.setItem("highscores", JSON.stringify(data));
+  }catch(e){
+    console.log(e)
+  }
+}
+React.useEffect(()=>{
+  if(highStreak>0||highMoves<999||prestige>0){
+  writeData({streak:highStreak,moves:highMoves,prestige:prestige})
+  }
+},[highStreak,highMoves,prestige])
 
 React.useEffect(()=>{
   if(streak>0){
@@ -80,6 +108,7 @@ React.useEffect(()=>{
         let message = ''
         if(moves+1<=highMoves){
           setHighMoves(moves+1)
+          if(moves+1<=CARDS_NUMBER/2){setPrestige(prestige+1)}
           playSound('new_record')
           message = 'New Record!'
         }else{playSound('win')}
@@ -166,11 +195,13 @@ for (let i=0;i<CARDS_NUMBER;i++){
   </View>
 }
 
-
+let prestigemessage = `Tries: ${moves},  High Score: ${highMoves}`
+if(prestige>0){prestigemessage = `Tries: ${moves},  Times Perfect: ${prestige}`}
   return(
   <SafeAreaView style={styles.container}>
-    <Text style={styles.scores}>Streak: {streak}  High Score: {highStreak}</Text>
-    <Text style={styles.scores}>Tries: {moves}  High Score: {highMoves}</Text>
+    <Text style={styles.scores}>Streak: {streak},  High Score: {highStreak}</Text>
+    <Text style={styles.scores}>{prestigemessage}</Text>
+
 
     {cardRender}
 
@@ -195,6 +226,7 @@ const styles = StyleSheet.create({
   },
   scores:{
     fontSize:20,
-    marginLeft:20
+    marginLeft:20,
+    zIndex:9999
   }
 })
